@@ -6,20 +6,10 @@
 #include <iostream>
 #include <atomic>
 
-#include <algorithm>
 #include <iterator>
 #include <vector>
 
-#define B 2048 // 4096
-
-
-
-template <typename Iter>
-void printVector2(Iter first, Iter last)
-{
-  for (Iter it = first; it < last; ++it)
-    std::cout << *it << (it < last-1 ? ", " : "\n");
-}
+#define B 2096
 
 
 template< class ForwardIt, class UnaryPredicate >
@@ -50,6 +40,24 @@ constexpr int neutralize( ForwardIt left_first, ForwardIt left_last,
   return 1;
 }
 
+template <class ForwardIt>
+void insertion_sort(ForwardIt first, ForwardIt last)
+{
+  int i = 1;
+  while ( i < (last - first))
+  {
+    const auto x = *(first + i);
+    int j = i-1;
+    while (j >= 0 && *(first + j) > x)
+    {
+      *(first + j + 1) = *(first + j);
+      --j;
+    }
+    *(first + j + 1) = x;
+    ++i;
+  }
+}
+
 template< class ForwardIt, class UnaryPredicate >
 constexpr ForwardIt spartition( const ForwardIt first, const ForwardIt last, const UnaryPredicate p )
 {
@@ -63,9 +71,10 @@ constexpr ForwardIt spartition( const ForwardIt first, const ForwardIt last, con
 }
 
 template< class ForwardIt, class UnaryPredicate >
-constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, const UnaryPredicate p )
+constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, const UnaryPredicate p, const int num = omp_get_max_threads() )
 {
-  const auto num = omp_get_max_threads();
+  //std::cout << "num = " << num << "\n";
+  omp_set_num_threads(num);
 
   const int N = last - first;
   std::atomic<int> numRemainingBlocks((N-1) / B + 1);
@@ -76,11 +85,11 @@ constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, con
   //std::vector<int> test(numRemainingBlocks, 0);
   std::vector<long> remainingBlocks(num);
 
-  std::atomic<int> LN (0);
-  std::atomic<int> RN (0);
+  long LN = 0;
+  long RN = 0;
   int q = 0;
 
-#pragma omp parallel reduction(+ : q)
+#pragma omp parallel reduction(+ : LN, RN, q)
 {
   const auto pid = omp_get_thread_num();
 
@@ -90,8 +99,6 @@ constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, con
   auto right_last = last;
 
   int ii, jj;
-  int leftcounter = 0;
-  int rightcounter = 0;
 
   if (0 < std::atomic_fetch_sub(&numRemainingBlocks, 1)) {
     ii = std::atomic_fetch_add(&i, 1);
@@ -111,8 +118,7 @@ constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, con
     right_last = last;
   }
 
-  bool receivedLastBlock = (right_first == (last - N%B));
-  if (receivedLastBlock) right_last = last;
+  if (right_last > last) right_last = last;
 
   while ( (left_first != last) && (right_first != last) )
   {
@@ -120,6 +126,7 @@ constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, con
     if (result%2 == 0)
     {
       //test[(left_first-first)/4] = -1;
+      LN += left_last-left_first;
       if (0 < std::atomic_fetch_sub(&numRemainingBlocks, 1)) {
         ii = std::atomic_fetch_add(&i, 1);
         left_first = first + ii*B;
@@ -128,11 +135,11 @@ constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, con
         left_first = last;
         left_last = last;
       }
-      leftcounter++;
     }
     if (result > 0)
     {
       //test[(right_first-first)/4] = 1;
+      RN += right_last -right_first;
       if (0 < std::atomic_fetch_sub(&numRemainingBlocks, 1)) {
         jj = std::atomic_fetch_add(&j, 1);
         right_first = last - N%B - jj*B;
@@ -141,62 +148,34 @@ constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, con
         right_first = last;
         right_last = last;
       }
-      rightcounter++;
     }
   }
 
   remainingBlocks[pid] = last - first;
-  if (left_first != last)
-  {
+  if (left_first != last) {
     remainingBlocks[pid] = left_first - first;
     q++;
-  } else if (right_first != last) {
+  }
+  else if (right_first != last) {
     remainingBlocks[pid] = right_first - first;
     q++;
   }
-
-  if ( receivedLastBlock && right_first != last-N%B )
-  {
-    rightcounter--;
-    auto tmp = N%B;
-    RN += tmp;
-  }
-
-  leftcounter = leftcounter * B;
-  rightcounter = rightcounter * B;
-
-  LN += leftcounter;
-  RN += rightcounter;
 } // end parallel
 
-  auto left_first = first;
-  auto left_last = first + B;
-  auto right_first = last - N%B;
-  auto right_last = last;
-
-
-  std::sort( remainingBlocks.begin(), remainingBlocks.end() );
+  insertion_sort( remainingBlocks.begin(), remainingBlocks.end() );
 /*
   std::sort( std::begin(remainingBlocks), std::end(remainingBlocks) );
   std::cout << "remainingBlocks: ";
   printVector2( std::begin(remainingBlocks), std::end(remainingBlocks) );
 */
-/*
-  std::cout << "\n 01 \n";
-  std::cout << LN << " LN - RN " << RN << "\n";
-  std::cout << "   remainingBlocks: ";
-  printVector2( remainingBlocks.begin(), remainingBlocks.end() );
-  std::cout << "   test: ";
-  printVector2( test.begin(), test.end());
-  for (auto it = first; it < last; it += B) printVector2(it, it+B);
-*/
+
   long left = 0;
   long right = q-1;
 
-  left_first = first + remainingBlocks[left];
-  left_last = left_first + B;
-  right_first = first + remainingBlocks[right];
-  right_last = right_first + B;
+  auto left_first = first + remainingBlocks[left];
+  auto left_last = left_first + B;
+  auto right_first = first + remainingBlocks[right];
+  auto right_last = right_first + B;
 
   if (right_last > last) right_last = last;
 
@@ -256,31 +235,7 @@ constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, con
       }
     }
   }
-/*
-     else if (l < right || ended_balanced) { // l ist linker Block
-        //std::cout << "left\n";
-        right_first = first + LN;
-        right_last = right_first + B;
-        left_first = first + remainingBlocks[l];
-        left_last = left_first + B;
 
-        if ( right_first != left_first ) {
-          if ( left_last > last) left_last = last;
-
-          auto tmp = *left_first;
-          auto left_it = left_first;
-          auto right_it = right_first;
-          while (left_it < left_last && right_it < right_last) {
-            tmp = *left_it;
-            *left_it = *right_it;
-            *right_it = tmp;
-            left_it++;
-            right_it++;
-          }
-        }
-        LN += B;
-      }
-*/
   for ( int l = left; l >= 0 ; l--) {
     if (remainingBlocks[l] != last - first) {
       if (l < left) { // l ist rechter Block
@@ -289,7 +244,6 @@ constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, con
         right_last = right_first + B;
         left_first = first + remainingBlocks[l];
         left_last = left_first + B;
-
 
         if ( right_first != left_first ) {
           auto tmp = *left_first;
@@ -339,55 +293,87 @@ constexpr ForwardIt ppartition( const ForwardIt first, const ForwardIt last, con
   return spartition(first+LN, last-RN, p);
 }
 
-template <class ForwardIt>
- void insertion_sort(ForwardIt first, ForwardIt last)
- {
-   int i = 1;
-   while ( i < (last - first))
-   {
-     const auto x = *(first + i);
-     int j = i-1;
-     while (j >= 0 && *(first + j) > x)
-     {
-       *(first + j + 1) = *(first + j);
-       --j;
-     }
-     *(first + j + 1) = x;
-     ++i;
-   }
- }
+template< class Elem >
+Elem medianOfThree(Elem a, Elem b, Elem c) {
+    if ((a > b) xor (a > c))
+        return a;
+    else if ((b < a) xor (b < c))
+        return b;
+    else
+        return c;
+}
 
 template <class ForwardIt>
- void pquicksort(ForwardIt first, ForwardIt last)
- {
-   if(std::distance(first,last) <= 32){
-     insertion_sort(first, last);
-     return;
-   }
-    auto pivot = *std::next(first, std::distance(first,last)/2);
-    ForwardIt middle1 = spartition(first, last,
-                         [pivot](const auto& em){ return em < pivot; });
-    ForwardIt middle2 = spartition(middle1, last,
-                         [pivot](const auto& em){ return em <= pivot; });
-    pquicksort(first, middle1);
-    pquicksort(middle2, last);
- }
+void pquicksort_(ForwardIt first, ForwardIt last, const int num = omp_get_max_threads())
+{
+  if(std::distance(first,last) <= 32){
+    insertion_sort(first, last);
+    return;
+  }
+  const auto pivot = medianOfThree(*first, *(first+(last-first)/2), *(last-1));
 
- template <class ForwardIt>
-  void quicksort(ForwardIt first, ForwardIt last)
-  {
-    if(std::distance(first,last) <= 32){
-      insertion_sort(first, last);
-      return;
-    }
-     auto pivot = *std::next(first, std::distance(first,last)/2);
-     ForwardIt middle1 = std::partition(first, last,
-                          [pivot](const auto& em){ return em < pivot; });
-     ForwardIt middle2 = std::partition(middle1, last,
-                          [pivot](const auto& em){ return em <= pivot; });
-     pquicksort(first, middle1);
-     pquicksort(middle2, last);
+  const auto p1 = [pivot](const auto& em){ return em < pivot; };
+  const auto p2 = [pivot](const auto& em){ return em <= pivot; };
+
+  ForwardIt middle1;
+  ForwardIt middle2;
+
+  if ( std::distance(first,last) >= 2*B ){
+    middle1 = ppartition(first, last, p1, num);
+    middle2 = ppartition(middle1, last, p2, num);
+  }
+  else {
+    middle1 = spartition(first, last, p1);
+    middle2 = spartition(middle1, last, p2);
   }
 
+  int new_num1 = num;
+  int new_num2 = num;
+  if ( num > 1 ) {
+    const float share = 1.0 * (middle1-first) / ((middle1-first)+(last-middle2));
+    new_num1 = ((int)(share * num) < 1) ? 1 : share * num;
+    new_num2 = ((num-new_num1) < 1) ? 1 : num-new_num1;
+  }
+
+#pragma omp task
+  pquicksort_(first, middle1, new_num1);
+#pragma omp task
+  pquicksort_(middle2, last, new_num2);
+}
+
+template <class ForwardIt>
+void pquicksort(ForwardIt first, ForwardIt last, const int num = omp_get_max_threads())
+{
+  omp_set_nested(1);
+  omp_set_dynamic(0);
+#pragma omp parallel
+#pragma omp single
+  pquicksort_(first, last, num);
+}
+
+template< class ForwardIt >
+void pquickselect( const ForwardIt first, const ForwardIt nth, const ForwardIt last, const int num = omp_get_max_threads() )
+{
+  if ( first == last ) return;
+
+  const auto pivot = medianOfThree(*first, *(first+(last-first)/2), *(last-1));
+  const auto p1 = [pivot](const auto& em){ return em < pivot; };
+  const auto p2 = [pivot](const auto& em){ return em <= pivot; };
+
+  ForwardIt middle1;
+  ForwardIt middle2;
+
+  if ( std::distance(first,last) >= 2*B ){
+    middle1 = ppartition(first, last, p1);
+    middle2 = ppartition(middle1, last, p2);
+  }
+  else {
+    middle1 = spartition(first, last, p1);
+    middle2 = spartition(middle1, last, p2);
+  }
+
+  if ( nth < middle1 ) pquickselect( first, nth, middle1 );
+  else if ( nth >= middle2 ) pquickselect( middle2, nth, last );
+}
 
 #endif // PARTITION_HPP
