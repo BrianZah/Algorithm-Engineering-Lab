@@ -1,3 +1,5 @@
+#include <omp.h>
+
 #include <vector>
 #include <algorithm>
 #include <parallel/algorithm>
@@ -17,6 +19,28 @@ void printVector( Iter first, Iter last )
     std::cout << *it << (it < last-1 ? ", " : "\n");
 }
 
+template <typename Iter>
+void generateRandomIntVector( Iter first, Iter last )
+{
+  long SIZE = last - first;
+  int THREADS = omp_get_max_threads();
+  int work_share = SIZE / THREADS;
+
+#pragma omp parallel for
+  for( int i = 0; i < THREADS; ++i )
+  {
+    std::mt19937 gen(std::random_device{}());
+    std::uniform_int_distribution<> dis( INT32_MIN, INT32_MAX );
+    auto dis1 = std::bind( dis, gen );
+
+    if( omp_get_thread_num() == THREADS-1)
+      std::generate( first + i*work_share , last, dis1 );
+    else
+      std::generate( first + i*work_share , first + (i+1)*work_share, dis1 );
+  }
+}
+
+
 int main( int argc, char* argv[] )
 {
   if(4 != argc)
@@ -27,7 +51,8 @@ int main( int argc, char* argv[] )
               << "  7: 1 & 2 & 3" << std::endl;
     return -1;
   }
-  int MODE, RUNS, SIZE;
+  int MODE, RUNS;
+  long SIZE;
 
   if( !(std::istringstream( argv[1]) >> MODE ) || !(MODE > 0) ||
       !(std::istringstream( argv[2]) >> RUNS ) || !(RUNS > 0) ||
@@ -52,12 +77,10 @@ int main( int argc, char* argv[] )
 
     for( int i = 0; i < RUNS; ++i )
     {
-      std::mt19937 gen(std::random_device{}());
-      std::uniform_int_distribution<> dis( INT32_MIN, INT32_MAX );
-      auto dis1 = std::bind( dis, gen );
       std::vector<int> g( SIZE );
-      std::generate( g.begin(), g.end(), dis1 );
+      generateRandomIntVector( g.begin(), g.end() );
       std::vector<int> g2( g );
+      std::vector<int> g3( g );
 
       if( !std::equal( g.begin(), g.end(), g2.begin() ) )
         std::cout << "WARRNING: no equal arrays at the beginning\n";
@@ -72,6 +95,11 @@ int main( int argc, char* argv[] )
       t1 = clock.now();
       time1 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 
+      t0 = clock.now();
+      auto g3_it = std::partition( g3.begin(), g3.end(), [](int i){return i%2 == 0;} );
+      t1 = clock.now();
+      time2 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
+
       __gnu_parallel::sort( g.begin(), g_it );
       __gnu_parallel::sort( g_it, g.end() );
       __gnu_parallel::sort( g2.begin(), g2_it );
@@ -84,7 +112,8 @@ int main( int argc, char* argv[] )
       }
     }
     std::cout << "__gnu_parallel::partition: " << time0 << " s\n";
-    std::cout << "               ppartition: " << time1 << " s\n\n";
+    std::cout << "               ppartition: " << time1 << " s\n";
+    std::cout << "           std::partition: " << time2 << " s\n\n";
   }
 
 // TEST pquicksort /////////////////////////////////////////////////////////////
@@ -96,10 +125,7 @@ int main( int argc, char* argv[] )
     for( int i = 0; i < RUNS; i++ )
     {
       std::vector<int> s( SIZE );
-      std::mt19937 gen( std::random_device{}() );
-      std::uniform_int_distribution<> dis( INT32_MIN, INT32_MAX );
-      auto dis1 = std::bind( dis, gen );
-      std::generate( s.begin(), s.end(), dis1 );
+      generateRandomIntVector( s.begin(), s.end() );
       std::vector<int> s2( s );
       std::vector<int> s3( s );
 
@@ -118,16 +144,13 @@ int main( int argc, char* argv[] )
       time1 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 
       t0 = clock.now();
-      pquicksort_dual_pivot( s3.begin(), s3.end() );
-      //std::sort( s3.begin(), s3.end() );
+      //pquicksort_dual_pivot( s3.begin(), s3.end() );
+      std::sort( s3.begin(), s3.end() );
       t1 = clock.now();
       time2 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 
-      if( !std::equal(s.begin(), s.end(), s2.begin()) ||
-          !std::equal(s.begin(), s.end(), s3.begin()) )
+      if( !std::equal(s.begin(), s.end(), s2.begin()) )
       {
-        if( !std::equal(s.begin(), s.end(), s2.begin()) ) std::cout << " 1 ";
-        if( !std::equal(s.begin(), s.end(), s3.begin()) ) std::cout << " 2 ";
         std::cout << " FAILED ( turn: " << i << " )\n";
         break;
       }
@@ -135,7 +158,7 @@ int main( int argc, char* argv[] )
     }
     std::cout << " __gnu_parallel::sort: " << time0 << " s\n";
     std::cout << "           pquicksort: " << time1 << " s\n";
-    std::cout << "pquicksort_dual_pivot: " << time2 << " s\n\n";
+    std::cout << "            std::sort: " << time2 << " s\n\n";
   }
 // TEST pquickselect ///////////////////////////////////////////////////////////
   if( 3 == MODE || 5 == MODE || 6 == MODE || 7 == MODE )
@@ -146,10 +169,7 @@ int main( int argc, char* argv[] )
     for( int i = 0; i < RUNS; i++ )
     {
       std::vector<int> t( SIZE );
-      std::mt19937 gen(std::random_device{}());
-      std::uniform_int_distribution<> dis( INT32_MIN, INT32_MAX );
-      auto dis1 = std::bind( dis, gen );
-      std::generate( t.begin(), t.end(), dis1 );
+      generateRandomIntVector( t.begin(), t.end() );
       std::vector<int> t2( t );
       std::vector<int> t3( t );
 
@@ -170,7 +190,7 @@ int main( int argc, char* argv[] )
       time1 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 
       t0 = clock.now();
-      pquickselect_iterativ( t3.begin(), t3.begin() + k, t3.end() );
+      std::nth_element( t3.begin(), t3.begin() + k, t3.end() );
       t1 = clock.now();
       time2 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 
@@ -184,7 +204,7 @@ int main( int argc, char* argv[] )
     }
     std::cout << "__gnu_parallel::nth_element: " << time0 << " s\n";
     std::cout << "               pquickselect: " << time1 << " s\n";
-    std::cout << "      pquickselect_iterativ: " << time2 << " s\n\n";
+    std::cout << "           std::nth_element: " << time2 << " s\n\n";
   }
   return 0;
 }

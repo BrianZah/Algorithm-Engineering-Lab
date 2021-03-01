@@ -9,6 +9,26 @@
 
 #include "ppartquick.hpp"
 
+template <typename Iter>
+void generateRandomIntVector( Iter first, Iter last )
+{
+  long SIZE = last - first;
+  int THREADS = omp_get_max_threads();
+  int work_share = SIZE / THREADS;
+
+#pragma omp parallel for
+  for( int i = 0; i < THREADS; ++i )
+  {
+    std::mt19937 gen(std::random_device{}());
+    std::uniform_int_distribution<> dis( INT32_MIN, INT32_MAX );
+    auto dis1 = std::bind( dis, gen );
+
+    if( omp_get_thread_num() == THREADS-1)
+      std::generate( first + i*work_share , last, dis1 );
+    else
+      std::generate( first + i*work_share , first + (i+1)*work_share, dis1 );
+  }
+}
 
 int main(int argc, char* argv[])
 {
@@ -35,6 +55,9 @@ int main(int argc, char* argv[])
   auto time1 = std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
   auto time2 = std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 
+  int THREADS = omp_get_max_threads();
+  int work_share = SIZE / THREADS;
+
 // TEST ppartition /////////////////////////////////////////////////////////////
 
   if( 1 == MODE )
@@ -45,11 +68,8 @@ int main(int argc, char* argv[])
     for( int i = 0; i < RUNS; ++i )
     {
       t0 = clock.now();
-      std::mt19937 gen( std::random_device{}() );
-      std::uniform_int_distribution<> dis( INT32_MIN, INT32_MAX );
-      auto dis1 = std::bind( dis, gen );
       std::vector<int> g( SIZE );
-      std::generate( g.begin(), g.end(), dis1 );
+      generateRandomIntVector( g.begin(), g.end() );
       t1 = clock.now();
       time1 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 
@@ -72,11 +92,8 @@ int main(int argc, char* argv[])
     for( int i = 0; i < RUNS; i++ )
     {
       t0 = clock.now();
-      std::mt19937 gen( std::random_device{}() );
-      std::uniform_int_distribution<> dis( INT32_MIN, INT32_MAX );
-      auto dis1 = std::bind( dis, gen );
       std::vector<int> s( SIZE );
-      std::generate( s.begin(), s.end(), dis1 );
+      generateRandomIntVector( s.begin(), s.end() );
       t1 = clock.now();
       time1 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 
@@ -101,10 +118,7 @@ int main(int argc, char* argv[])
     {
       t0 = clock.now();
       std::vector<int> t( SIZE );
-      std::mt19937 gen( std::random_device{}() );
-      std::uniform_int_distribution<> dis( INT32_MIN, INT32_MAX );
-      auto dis1 = std::bind( dis, gen );
-      std::generate( t.begin(), t.end(), dis1 );
+      generateRandomIntVector( t.begin(), t.end() );
       t1 = clock.now();
       time1 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 
@@ -131,10 +145,7 @@ int main(int argc, char* argv[])
     {
       t0 = clock.now();
       std::vector<int> d( SIZE );
-      std::mt19937 gen(std::random_device{}());
-      std::uniform_int_distribution<> dis( INT32_MIN, INT32_MAX );
-      auto dis1 = std::bind( dis, gen );
-      std::generate( d.begin(), d.end(), dis1 );
+      generateRandomIntVector( d.begin(), d.end() );
       t1 = clock.now();
       time1 += std::chrono::duration_cast<std::chrono::nanoseconds>( t1 - t0 ).count()/1.0E9;
 

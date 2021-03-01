@@ -10,6 +10,7 @@ elseif( PROFILING STREQUAL "on" )
   set( CMAKE_CXX_COMPILER icpc )
 endif()
 
+# set compiler flags depending on compiler
 if( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" )
   set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}-O2 -march=native" )
 elseif( CMAKE_CXX_COMPILER_ID STREQUAL "Intel" )
@@ -23,14 +24,17 @@ endif()
 
 message( "Compiler call: ${CMAKE_CXX_COMPILER} ${CMAKE_CXX_FLAGS}" )
 
+# add the library
 file( GLOB LIB "${CMAKE_CURRENT_SOURCE_DIR}/lib" )
 file( GLOB TEST "${CMAKE_CURRENT_SOURCE_DIR}/test" )
 
 add_library( ppartquick INTERFACE )
 target_include_directories( ppartquick INTERFACE "${LIB}" )
 
+# add openMP
 find_package( OpenMP REQUIRED )
 
+# create the add_executable depending on the state of the PROFILING variable
 if( PROFILING STREQUAL "on" )
   add_executable( profiling.exe ${TEST}/profiling.cc )
   target_link_libraries( profiling.exe PRIVATE ppartquick )
