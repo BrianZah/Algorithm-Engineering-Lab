@@ -355,7 +355,7 @@ template< class FwdIt, class Predicate >
 constexpr FwdIt ppartition( const FwdIt first, const FwdIt last,
                             const Predicate pred,
                             const int num = omp_get_max_threads(),
-                            const bool omp_parallel_active = false)
+                            const bool omp_parallel_active = false )
 {
   // partitioned left-side / right-side elements
   long LN, RN;
@@ -391,7 +391,7 @@ Elem medianOfThree( const Elem a, const Elem b, const Elem c )
 
 // standard quicksort, per default single threaded
 // launch with pquicksort to run in parallel
-// num = number of threads can be provided to speed up partioning
+// num = number of threads, only for intern use
 template< class FwdIt, class Compare = std::less<> >
 void quicksort( const FwdIt first, const FwdIt last,
                 const Compare cmp = Compare{},
@@ -453,17 +453,16 @@ void quicksort( const FwdIt first, const FwdIt last,
 // parallel quicksort starter
 template< class FwdIt, class Compare = std::less<> >
 void pquicksort( const FwdIt first, const FwdIt last,
-                 const Compare cmp = Compare{},
-                 const int num = omp_get_max_threads() )
+                 const Compare cmp = Compare{} )
 {
 #pragma omp parallel
 #pragma omp single
-  quicksort( first, last, cmp, num );
+  quicksort( first, last, cmp, omp_get_max_threads() );
 }
 
 // dual pivot quicksort, per default single threaded
 // launch with pquicksort to run in parallel
-// num = number of threads can be provided to speed up partioning
+// num = number of threads, only for intern use
 template< class FwdIt, class Compare = std::less<> >
 void quicksort_dual_pivot( const FwdIt first, const FwdIt last,
                            const Compare cmp = Compare{},
@@ -541,14 +540,13 @@ void quicksort_dual_pivot( const FwdIt first, const FwdIt last,
 }
 
 // parallel dual pivot quicksort starter
-template <class FwdIt, class Compare = std::less<> >
+template< class FwdIt, class Compare = std::less<> >
 void pquicksort_dual_pivot( const FwdIt first, const FwdIt last,
-                            const Compare cmp = Compare{},
-                            const int num = omp_get_max_threads())
+                            const Compare cmp = Compare{} )
 {
 #pragma omp parallel
 #pragma omp single nowait
-  quicksort_dual_pivot(first, last, cmp, num);
+  quicksort_dual_pivot( first, last, cmp, omp_get_max_threads() );
 }
 
 // parallel quickselect
