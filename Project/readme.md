@@ -1,12 +1,11 @@
 # What's the project about?
-The goal of the project was to implement a parallel version of a partitioner, quicksort and quickselect based on the findings from Philipas Tsigas and Yi Zhang.
+The goal of the project was to implement a parallel version of a partitioner, quicksort and quickselect based on the findings from Philipas Tsigas and Yi Zhang. (Philipas Tsigas and Yi Zhang. 2003. A Simple, Fast Parallel Implementation of Quicksort and its Performance. IEEE.)
 # What is needed?
-The library was tested with the GNU g++ and the Intel icpc compiler. To use the library you need a compiler with openmp support. If used within a CMake project, a current version of it is required as well. Older versions of CMake may have issues with including openMP in this way.
+The library was tested with the GNU g++ and the Intel icpc compiler. To use the library a compiler with openmp support is needed. If used within a CMake project, a current version of it is required as well. Older versions of CMake may cause issues with including openMP in this way.
 # How to install
 This library can be used as any other header-only library. The actual header is stored in the **lib** directory. Three common ways of using it are described in the following. 
 ## In a one folder project
-The header can be downloaded and placed in the same folder as the main program is stored. Now, include the header with #include "ppartquick.hpp". After that, you should be able to use the functionality of this header. Do not forget to add the openMP directive when compiling and linking. A possible compile and link command 
-may look as follows:<br/><br/>
+The header can be downloaded and placed in the same folder as the main program is stored. Now, the header can be included with #include "ppartquick.hpp". After that, you should be able to use the functionality of this header. Please, do not forget to add the openMP directive when compiling and linking. A possible compile and link command may look as follows:<br/><br/>
 Intel compiler:
 ```bash
 icpc main.cc -o main.exe -O2 -march=native -ffast-math -fopenmp
@@ -29,10 +28,10 @@ add_executable( main.exe main.cc )
 target_link_libraries( main.exe PRIVATE ppartquick )
 target_link_libraries( main.exe PUBLIC OpenMP::OpenMP_CXX )
 ```
-Please, replace the corresponding file- and foldernames, eventually.
+Eventually, replace the corresponding file- and foldernames.
 ## Together with the test-examples
 The complete project folder can also be downloaded to compare the performance with the gnu_parallel library.
-For further details, have a look in the provided CMake script.
+For further details, have a look at the provided CMake script.
 # How to use
 ## ppartition
 ```cpp
@@ -44,7 +43,7 @@ constexpr FwdIt ppartition( const FwdIt first, const FwdIt last,
 ```
 - **ppartition** can be used as **std::partition** except for the option to give an execution policy. (https://en.cppreference.com/w/cpp/algorithm/partition)
 - Additionally, the number of executing threads can be given.
-- The parameter bool omp_parallel_active is for internal use only.
+- The parameter omp_parallel_active is for intern use.
 ## pqicksort and pquicksort_dual_pivot
 ```cpp
 template< class FwdIt, class Compare = std::less<> >
