@@ -1,0 +1,10 @@
+iterations,vectorsize,algorithm,time
+100,1000000,__gnu_parallel::nth_element,0.173941
+100,1000000,pquickselect,0.231461
+100,1000000,std::nth_element,0.944187
+100,10000000,__gnu_parallel::nth_element,1.5335
+100,10000000,pquickselect,1.80334
+100,10000000,std::nth_element,9.64041
+100,100000000,__gnu_parallel::nth_element,13.6035
+100,100000000,pquickselect,15.9404
+100,100000000,std::nth_element,71.2339

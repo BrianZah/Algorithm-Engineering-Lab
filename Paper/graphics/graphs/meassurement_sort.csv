@@ -1,0 +1,10 @@
+iterations,vectorsize,algorithm,time
+100,1000000,__gnu_parallel::sort,1.37933
+100,1000000,pquicksort,1.84677
+100,1000000,std::sort,8.9126
+100,10000000,__gnu_parallel::sort,15.3981
+100,10000000,pquicksort,19.2801
+100,10000000,std::sort,76.4423
+100,100000000,__gnu_parallel::sort,171.916
+100,100000000,pquicksort,210.276
+100,100000000,std::sort,805.264

@@ -1,0 +1,41 @@
+TEST: ppartition ( vectorsize = 1000000000, iterations = 2 )
+               ppartition: 2.87537 s
+                 overhead: 10.2395 s
+
+
+TEST: pquicksort ( vectorsize = 1000000000, iterations = 1 )
+          pquicksort: 26.2354 s
+            overhead: 6.87036 s
+
+
+TEST: pquickselect ( vectorsize = 1000000000, iterations = 1 )
+               pquickselect: 1.79398 s
+                   overhead: 6.85861 s
+
+
+TEST: pquicksort_dual_pivot ( vectorsize = 1000000000, iterations = 1 )
+pquicksort_dual_pivot: 25.8518 s
+             overhead: 6.93792 s
+             
+ ============================================================================
+
+
+TEST: ppartition ( vectorsize = 1000000000, iterations = 1 )
+               ppartition: 1.44756 s
+                 overhead: 2.34594 s
+
+
+TEST: pquicksort ( vectorsize = 1000000000, iterations = 1 )
+          pquicksort: 26.265 s
+            overhead: 2.37725 s
+
+
+TEST: pquickselect ( vectorsize = 1000000000, iterations = 1 )
+               pquickselect: 1.92247 s
+                   overhead: 2.40005 s
+
+
+TEST: pquicksort_dual_pivot ( vectorsize = 1000000000, iterations = 1 )
+pquicksort_dual_pivot: 26.8768 s
+             overhead: 2.43106 s
+             

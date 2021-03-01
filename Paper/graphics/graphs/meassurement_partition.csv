@@ -1,0 +1,10 @@
+iterations,vectorsize,algorithm,time
+100,1000000,__gnu_parallel::partition,0.123146
+100,1000000,ppartition,0.160048
+100,1000000,std::partition,0.933777
+100,10000000,__gnu_parallel::partition,1.16682
+100,10000000,ppartition,1.47801
+100,10000000,std::partition,9.54398
+100,100000000,__gnu_parallel::partition,11.4809
+100,100000000,ppartition,14.6185
+100,100000000,std::partition,71.021
