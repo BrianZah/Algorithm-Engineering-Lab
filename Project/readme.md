@@ -33,6 +33,8 @@ Eventually, replace the corresponding file- and foldernames.
 The complete project folder can also be downloaded to compare the performance with the gnu_parallel library.
 For further details, have a look at the provided CMake script.
 # How to use
+## adopting blocksize to system's L1-Cache
+Please, adopt the blocksize to your system's L1-Cache. You will find further information in the first comment of the library (ppartquick.hpp).
 ## ppartition
 ```cpp
 template< class FwdIt, class Predicate >
@@ -69,3 +71,5 @@ void pquickselect_iterativ( const FwdIt first, const FwdIt nth, const FwdIt last
 - Additionally, the number of executing threads can be given.
 - **pquickselect_iterativ** is significantly slower than pqickselect and does not offer to give a compare function as argument.
 - The number of executing threads can be given.
+# How tests were executed
+First, special test cases were written. However, during the project, this approach turned out to be inefficient. Therefore, the test/test_with_gnu.cc was created. It allowed hundreds of thousands of randomly generated tests during the development process. Furthermore, this program also allows benchmarking with the gnu-parallel library.
