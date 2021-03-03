@@ -72,4 +72,4 @@ void pquickselect_iterativ( const FwdIt first, const FwdIt nth, const FwdIt last
 - **pquickselect_iterativ** is significantly slower than pqickselect and does not offer to give a compare function as argument.
 - The number of executing threads can be given.
 # How tests were executed
-First, special test cases were written. However, during the project, this approach turned out to be inefficient. Therefore, the test/test_with_gnu.cc was created. It allowed hundreds of thousands of randomly generated tests during the development process. Furthermore, this program also allows benchmarking with the gnu-parallel library.
+First, special test cases were written. However, during the project, this approach turned out to be inefficient. Therefore, the test/test_with_gnu_parallel.cc was created. It allowed hundreds of thousands of randomly generated tests during the development process. Furthermore, this program also allows benchmarking with the gnu-parallel library.
