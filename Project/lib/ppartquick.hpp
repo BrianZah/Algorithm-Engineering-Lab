@@ -3,8 +3,13 @@
 
 #include <omp.h>
 #include <atomic>
-
-
+// defines block size
+// Please adopt this variable when using the library
+// it depands on used data type and the sysemts L1-cache
+// two blocks should fit in L1-Cache:
+// Size(DType) * B * 2 = L1-Cache
+// Using simultaneous multi-threading / hyperthreading:
+// Size(DType) * B * 2 * 2 = L1-Cache
 #define B 2096
 
 // receives two blocks and obtains one left-side or one right-side block or both
